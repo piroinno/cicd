@@ -1,0 +1,84 @@
+name: Composite CI/CD Workflow for container orchestration
+
+on:
+    workflow_call:
+        inputs:
+            app:
+                required: true
+                type: string
+            build_context:
+                required: true
+                type: string
+            dockerfile_path:
+                required: true
+                type: string
+            gitops_overlay_path:
+                required: false
+                type: string
+            argocd_overlay_path:
+                required: false
+                type: string
+
+env:
+    is_dr: ${{ vars.is_dr }}
+
+jobs:
+    setup:
+        runs-on: default
+        outputs:
+            branch: ${{ steps.set_branch.outputs.branch }}
+            environment: ${{ steps.set_environment.outputs.environment }}
+            environment_short: ${{ steps.set_environment.outputs.environment_short }}
+            region: ${{ steps.set_region.outputs.region }}
+            aks_cluster_name: ${{ steps.set_aks_cluster_name.outputs.aks_cluster_name }}
+            acr_name: ${{ steps.set_acr_name.outputs.acr_name }}
+            workflow_secrets_backend: ${{ steps.set_workflow_secrets_backend.outputs.workflow_secrets_backend }}
+            default_runner_group: ${{ steps.set_default_runner_group.outputs.default_runner_group }}
+            default_runner_labels: ${{ steps.set_default_runner_labels.outputs.default_runner_labels }}
+            build_version: ${{ steps.set_build_version.outputs.build_version }}
+            package_artifact_host: ${{ steps.set_package_artifact_host.outputs.package_artifact_host }}
+        steps:
+            - name: Configure workflow
+              uses: ./utils/setup/@init
+              with:
+                requires: "aks,acr,gitops,argo"
+                is_dr: ${{ env.is_dr }}
+              env:
+                GH_APP_CLIENT_ID: ${{ secrets.GH_APP_CLIENT_ID }}
+                GH_APP_CLIENT_SECRET: ${{ secrets.GH_APP_CLIENT_SECRET }}
+    
+    build-container:
+        needs: setup
+        uses: ./.github/workflows/container-build.yaml@init
+        with:
+            app: ${{ inputs.app }}
+            build_context: ${{ inputs.build_context }}
+            dockerfile_path: ${{ inputs.dockerfile_path }}
+            branch: ${{ needs.setup.outputs.branch }}
+            environment: ${{ needs.setup.outputs.environment }}
+            environment_short: ${{ needs.setup.outputs.environment_short }}
+            region: ${{ needs.setup.outputs.region }}
+            aks_cluster_name: ${{ needs.setup.outputs.aks_cluster_name }}
+            acr_name: ${{ needs.setup.outputs.acr_name }}
+            workflow_secrets_backend: ${{ needs.setup.outputs.workflow_secrets_backend }}
+            default_runner_group: ${{ needs.setup.outputs.default_runner_group }}
+            default_runner_labels: ${{ needs.setup.outputs.default_runner_labels }}
+            build_version: ${{ needs.setup.outputs.build_version }}
+
+    deploy-container:
+        needs: setup
+        uses: ./.github/workflows/container-deploy.yaml@init
+        with:
+            app: ${{ inputs.app }}
+            build_context: ${{ inputs.build_context }}
+            dockerfile_path: ${{ inputs.dockerfile_path }}
+            branch: ${{ needs.setup.outputs.branch }}
+            environment: ${{ needs.setup.outputs.environment }}
+            environment_short: ${{ needs.setup.outputs.environment_short }}
+            region: ${{ needs.setup.outputs.region }}
+            aks_cluster_name: ${{ needs.setup.outputs.aks_cluster_name }}
+            acr_name: ${{ needs.setup.outputs.acr_name }}
+            workflow_secrets_backend: ${{ needs.setup.outputs.workflow_secrets_backend }}
+            default_runner_group: ${{ needs.setup.outputs.default_runner_group }}
+            default_runner_labels: ${{ needs.setup.outputs.default_runner_labels }}
+            build_version: ${{ needs.setup.outputs.build_version }}
