@@ -49,7 +49,7 @@ jobs:
     
     build-container:
         needs: setup
-        uses: ./.github/workflows/container-build.yaml@init
+        uses: ./.github/workflows/container-cicd-build.yaml
         with:
             app: ${{ inputs.app }}
             build_context: ${{ inputs.build_context }}
@@ -67,7 +67,7 @@ jobs:
 
     deploy-container:
         needs: setup
-        uses: ./.github/workflows/container-deploy.yaml@init
+        uses: ./.github/workflows/container-cicd-deploy.yaml
         with:
             app: ${{ inputs.app }}
             build_context: ${{ inputs.build_context }}

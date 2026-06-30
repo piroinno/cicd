@@ -1,0 +1,8 @@
+name: Terraform Action For IaC
+description: This action is used to run Terraform commands for Infrastructure as Code (IaC) deployments
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3

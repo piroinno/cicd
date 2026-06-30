@@ -1,4 +1,55 @@
-This is a placeholder.
+name: Container CICD Deploy Reusable Workflow
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+      build_context:
+        required: true
+        type: string
+      dockerfile_path:
+        required: true
+        type: string
+      branch:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+      environment_short:
+        required: true
+        type: string
+      region:
+        required: true
+        type: string
+      aks_cluster_name:
+        required: true
+        type: string
+      acr_name:
+        required: true
+        type: string
+      workflow_secrets_backend:
+        required: true
+        type: string
+      default_runner_group:
+        required: true
+        type: string
+      default_runner_labels:
+        required: true
+        type: string
+      build_version:
+        required: true
+        type: string
+      package_artifact_host:
+        required: true
+        type: string
 
-The code in this file is a placeholder for the GitHub Actions workflow configuration for
-building and deploying containerized applications.
+jobs:
+  deploy:
+    runs-on: 
+        group: ${{ inputs.default_runner_group }}
+        labels: ${{ inputs.default_runner_labels }}
+    steps:
+        - name: Checkout Repository
+          uses: actions/checkout@v3

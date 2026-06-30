@@ -1,0 +1,8 @@
+name: Build Docker Image
+description: This action is used to build a Docker image for the application.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3

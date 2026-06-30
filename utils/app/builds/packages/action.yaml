@@ -1,0 +1,8 @@
+name: Build Application Packages
+description: This action is used to build application packages for deployment.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3

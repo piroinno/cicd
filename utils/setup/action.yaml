@@ -1,0 +1,8 @@
+name: Setup workflow variables
+description: This action is used to set up workflow variables for the GitHub Actions workflow.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
