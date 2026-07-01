@@ -1,0 +1,106 @@
+name: Get Secrets from Key Vault
+description: This action is used to get secrets from an Azure Key Vault for use in the GitHub Actions workflow.
+inputs:
+  workflow_keyvault:
+    description: 'The name of the Azure Key Vault to retrieve secrets from.'
+    required: true
+  aks_cluster_name:
+    description: 'The name of the Azure Kubernetes Service (AKS) cluster.'
+    required: true
+  aks_resource_group:
+    description: 'The resource group of the AKS cluster.'
+    required: true
+  kustomization_path:
+    description: 'The path to the kustomization directory for rendering manifests.'
+    required: true
+  kubectl_version:
+    description: 'The version of kubectl to use for deploying manifests.'
+    required: true
+  manifests:
+    description: 'The path to the Kubernetes manifests to deploy.'
+    required: true
+  images:
+    description: 'The list of images to deploy in the format <image_name>:<tag>.'
+    required: true
+  app_namespace:
+    description: 'The namespace in which to deploy the application.'
+    required: true
+  strategy:
+    description: 'The deployment strategy to use (e.g., RollingUpdate, Recreate).'
+    required: true
+  argocd_app_name:
+    description: 'The name of the ArgoCD application to sync.'
+    required: true
+  build_version:
+    description: 'The build version or tag to sync in ArgoCD.'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Get Workflow AzureRM Credentials
+      uses: azure/login@v1
+      id: azure-login
+      with:
+        creds: ${{ secrets.WORKFLOW_AZURE_CREDENTIALS }}
+
+    - name: Get Secrets from Key Vault
+      uses: azure/get-keyvault-secrets@v1
+      with:
+        keyvault: ${{ inputs.workflow_keyvault }}
+        secrets: |
+          - ARM_CLIENT_ID
+          - ARM_CLIENT_SECRET
+          - ARM_TENANT_ID
+          - ARM_SUBSCRIPTION_ID
+    
+    - name: Login to Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ' "clientId": "${{ steps.get-secrets.outputs.ARM_CLIENT_ID }}", "clientSecret": "${{ steps.get-secrets.outputs.ARM_CLIENT_SECRET }}", "tenantId": "${{ steps.get-secrets.outputs.ARM_TENANT_ID }}", "subscriptionId": "${{ steps.get-secrets.outputs.ARM_SUBSCRIPTION_ID }}" '
+
+    - name: Set AKS Context
+      uses: azure/aks-set-context@v1
+      with:
+        cluster-name: ${{ inputs.aks_cluster_name }}
+        resource-group: ${{ inputs.aks_resource_group }}
+
+    - name: Bake the manifest
+      uses: azure/k8s-bake@v1
+      with:
+        renderEngine: kustomize
+        kustomizationPath: ${{ inputs.kustomization_path }}
+        kubectl-version: ${{ inputs.kubectl_version }}
+
+    - name: K8s Deploy
+      uses: azure/k8s-deploy@v1
+      with:
+        manifests: ${{ inputs.manifests }}
+        images: ${{ inputs.images }}
+        namespace: ${{ inputs.app_namespace }}
+        strategy: ${{ inputs.strategy }}
+        private-cluster: true
+
+    - name: ArgoCD Sync
+      shell: pwsh
+      run: |
+        @"
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
+        metadata:
+          name: ${{ inputs.argocd_app_name }}
+          namespace: ${{ inputs.app_namespace }}
+        operation:
+          initiatedBy:
+            username: ${{ github.triggering_actor }}
+          sync:
+            revision: ${{ inputs.build_version }}
+            prune: true
+            dryRun: false
+            force: true
+            syncStrategy:
+              hook: {}
+        "@ | kubectl patch application ${{ inputs.argocd_app_name }} -n ${{ inputs.app_namespace }} --type merge -p "$(cat -)"
+    

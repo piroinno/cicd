@@ -6,3 +6,54 @@ runs:
   steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
+    
+    - name: Get Workflow AzureRM Credentials
+      uses: azure/login@v1
+      id: azure-login
+      with:
+        creds: ${{ secrets.WORKFLOW_AZURE_CREDENTIALS }}
+    
+    - name: Get Secrets from Key Vault
+      uses: azure/get-keyvault-secrets@v1
+      with:
+        keyvault: ${{ inputs.workflow_keyvault }}
+        secrets: |
+          - ARM_CLIENT_ID
+          - ARM_CLIENT_SECRET
+          - ARM_TENANT_ID
+          - ARM_SUBSCRIPTION_ID
+    
+    - name: Login to Azure CLI
+      uses: azure/login@v1
+      with:
+        creds: ' "clientId": "${{ steps.get-secrets.outputs.ARM_CLIENT_ID }}", "clientSecret": "${{ steps.get-secrets.outputs.ARM_CLIENT_SECRET }}", "tenantId": "${{ steps.get-secrets.outputs.ARM_TENANT_ID }}", "subscriptionId": "${{ steps.get-secrets.outputs.ARM_SUBSCRIPTION_ID }}" '
+
+    - name: ACR Login
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ inputs.acr_login_server }}
+
+    - name: Build Docker Image
+      uses: docker/build-push-action@v4
+      with:
+        context: ${{ inputs.docker_context }}
+        file: ${{ inputs.dockerfile_path }}
+        push: false
+        tags: ${{ inputs.image_name }}:${{ inputs.image_tag }}
+        platforms: linux/amd64
+        build-args: ${{ inputs.build_args }}
+      env:
+        DOCKER_BUILDKIT: 1
+
+    - name: Push Docker Image to ACR
+      if: ${{ inputs.push_to_acr == 'true' }}
+      uses: docker/build-push-action@v4
+      with:
+        context: ${{ inputs.docker_context }}
+        file: ${{ inputs.dockerfile_path }}
+        push: true
+        tags: ${{ inputs.acr_login_server }}/${{ inputs.image_name }}:${{ inputs.image_tag }}
+        platforms: linux/amd64
+        build-args: ${{ inputs.build_args }}
+      env:
+        DOCKER_BUILDKIT: 1

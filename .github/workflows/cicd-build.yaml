@@ -1,4 +1,4 @@
-name: Container CICD Build Reusable Workflow
+name: Standard CICD Build Reusable Workflow
 on:
   workflow_call:
     inputs:
@@ -44,25 +44,8 @@ on:
       package_artifact_host:
         required: true
         type: string
-      test_config:
-        required: false
-        type: string
 
 jobs:
-  unit-test:
-    if: ${{ inputs.test_config != '' }}
-    runs-on: 
-        group: ${{ inputs.default_runner_group }}
-        labels: ${{ inputs.default_runner_labels }}
-    steps:
-        - name: Checkout Repository
-          uses: actions/checkout@v3
-
-        - name: Run Unit Tests
-          uses: ./utils/app/test/unit-tests
-          with:
-            test_config: ${{ inputs.test_config }}
-
   build:
     runs-on: 
         group: ${{ inputs.default_runner_group }}
@@ -70,6 +53,3 @@ jobs:
     steps:
         - name: Checkout Repository
           uses: actions/checkout@v3
-
-        - name: Build Python Package
-          uses: ./utils/app/builds/packages/python

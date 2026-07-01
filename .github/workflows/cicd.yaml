@@ -1,4 +1,4 @@
-name: Composite CI/CD Workflow for container orchestration
+name: Composite CI/CD Workflow for standard orchestration
 
 on:
     workflow_call:
@@ -16,9 +16,6 @@ on:
                 required: false
                 type: string
             argocd_overlay_path:
-                required: false
-                type: string
-            test_config:
                 required: false
                 type: string
 
@@ -68,7 +65,7 @@ jobs:
             default_runner_labels: ${{ needs.setup.outputs.default_runner_labels }}
             build_version: ${{ needs.setup.outputs.build_version }}
             package_artifact_host: ${{ needs.setup.outputs.package_artifact_host }}
-
+            
     deploy-container:
         needs: setup
         uses: ./.github/workflows/container-cicd-deploy.yaml

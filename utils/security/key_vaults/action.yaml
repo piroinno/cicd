@@ -1,0 +1,8 @@
+name: Get App Token
+description: This action is used to get an application token for authentication with the GitHub API.
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
